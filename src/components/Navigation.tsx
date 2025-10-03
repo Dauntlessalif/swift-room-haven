@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { HOTEL_CONFIG } from "@/config/hotelConfig";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +14,7 @@ const Navigation = () => {
     { name: "About", path: "/about" },
     { name: "Contact", path: "/contact" },
     { name: "Pet Care", path: "/pet-care" },
+    { name: "My Bookings", path: "/my-bookings" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -51,11 +53,13 @@ const Navigation = () => {
           <div className="hidden md:flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Phone className="h-4 w-4" />
-              <span>+1 (555) 123-4567</span>
+              <span>{HOTEL_CONFIG.contact.phone}</span>
             </div>
-            <Button variant="outline" className="border-gold text-gold hover:bg-gold hover:text-gold-foreground">
-              Book Now
-            </Button>
+            <Link to="/rooms">
+              <Button variant="outline" className="border-gold text-gold hover:bg-gold hover:text-gold-foreground">
+                Book Now
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -92,11 +96,13 @@ const Navigation = () => {
               <div className="px-3 py-4 border-t border-border mt-4">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-3">
                   <Phone className="h-4 w-4" />
-                  <span>+1 (555) 123-4567</span>
+                  <span>{HOTEL_CONFIG.contact.phone}</span>
                 </div>
-                <Button variant="outline" className="w-full border-gold text-gold hover:bg-gold hover:text-gold-foreground">
-                  Book Now
-                </Button>
+                <Link to="/rooms">
+                  <Button variant="outline" className="w-full border-gold text-gold hover:bg-gold hover:text-gold-foreground">
+                    Book Now
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

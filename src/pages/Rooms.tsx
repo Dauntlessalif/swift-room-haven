@@ -1,12 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import RoomCard from "@/components/RoomCard";
 import ReservationModal from "@/components/ReservationModal";
-import { rooms, Room } from "@/data/rooms";
+import { Room } from "@/data/rooms";
+import { roomsApi } from "@/lib/api";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Rooms = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadRooms();
+  }, []);
+
+  const loadRooms = async () => {
+    try {
+      setIsLoading(true);
+      const data = await roomsApi.getAllRooms();
+      // Map database rooms to Room type
+      const mappedRooms: Room[] = data.map((dbRoom) => ({
+        id: dbRoom.id,
+        name: dbRoom.name,
+        description: dbRoom.description,
+        price: Number(dbRoom.price),
+        capacity: dbRoom.capacity,
+        size: dbRoom.size,
+        bedType: dbRoom.bed_type,
+        amenities: dbRoom.amenities,
+        image: dbRoom.image_url || "",
+        available: dbRoom.available,
+      }));
+      setRooms(mappedRooms);
+    } catch (error) {
+      console.error('Error loading rooms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load rooms. Please refresh the page.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleBookRoom = (room: Room) => {
     setSelectedRoom(room);
@@ -34,15 +74,21 @@ const Rooms = () => {
         {/* Rooms Grid */}
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {rooms.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  onBook={handleBookRoom}
-                />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-navy" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {rooms.map((room) => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    onBook={handleBookRoom}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

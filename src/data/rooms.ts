@@ -1,7 +1,4 @@
-import suiteImage from "@/assets/suite-room.jpg";
-import deluxeImage from "@/assets/deluxe-room.jpg";
-import standardImage from "@/assets/standard-room.jpg";
-
+// Room interface matching database schema
 export interface Room {
   id: number;
   name: string;
@@ -15,41 +12,14 @@ export interface Room {
   available: boolean;
 }
 
-export const rooms: Room[] = [
-  {
-    id: 1,
-    name: "Presidential Suite",
-    image: suiteImage,
-    price: 899,
-    capacity: 4,
-    description: "Indulge in the ultimate luxury experience with our Presidential Suite featuring panoramic city views, separate living area, and premium amenities.",
-    amenities: ["Free Wi-Fi", "Valet Parking", "Coffee Maker", "Room Service", "Mini Bar", "City View"],
-    size: "1,200 sq ft",
-    bedType: "King Bed",
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Deluxe Room",
-    image: deluxeImage,
-    price: 399,
-    capacity: 2,
-    description: "Spacious and elegantly appointed with modern amenities, perfect for business travelers and couples seeking comfort and style.",
-    amenities: ["Free Wi-Fi", "Coffee Maker", "Room Service", "Work Desk"],
-    size: "450 sq ft",
-    bedType: "Queen Bed",
-    available: true,
-  },
-  {
-    id: 3,
-    name: "Standard Room",
-    image: standardImage,
-    price: 249,
-    capacity: 2,
-    description: "Comfortable and stylish accommodation with all essential amenities for a pleasant stay at an excellent value.",
-    amenities: ["Free Wi-Fi", "Coffee Maker", "Daily Housekeeping"],
-    size: "300 sq ft",
-    bedType: "Double Bed",
-    available: true,
-  },
-];
+// This file now expects rooms to be fetched from the database
+// The hardcoded room data has been moved to INSERT_ROOMS_DHAKA.sql
+// Use the roomsApi from lib/api.ts to fetch rooms from Supabase
+
+// Example usage in components:
+// import { roomsApi } from '@/lib/api';
+// const rooms = await roomsApi.getRooms();
+
+// For backward compatibility, export an empty array
+// Components should fetch from the API instead
+export const rooms: Room[] = [];

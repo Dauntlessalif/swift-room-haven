@@ -2,6 +2,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wifi, Car, Coffee, Utensils, Users, Bed } from "lucide-react";
+import { formatPrice } from "@/config/hotelConfig";
 
 interface Room {
   id: number;
@@ -47,7 +48,7 @@ const RoomCard = ({ room, onBook }: RoomCardProps) => {
         <div className="flex justify-between items-start mb-3">
           <h3 className="text-xl font-semibold text-foreground">{room.name}</h3>
           <div className="text-right">
-            <div className="text-2xl font-bold text-navy">${room.price}</div>
+            <div className="text-2xl font-bold text-navy">{formatPrice(room.price)}</div>
             <div className="text-sm text-muted-foreground">per night</div>
           </div>
         </div>

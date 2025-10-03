@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { contactMessagesApi } from "@/lib/api";
+import { HOTEL_CONFIG } from "@/config/hotelConfig";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -16,25 +18,45 @@ const Contact = () => {
     subject: "",
     message: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // Simulate form submission
-    toast({
-      title: "Message Sent!",
-      description: "Thank you for contacting us. We'll get back to you within 24 hours.",
-    });
+    try {
+      await contactMessagesApi.createMessage({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || null,
+        subject: formData.subject,
+        message: formData.message,
+      });
 
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    });
+      toast({
+        title: "Message Sent!",
+        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+      });
+
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error('Contact form error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const contactInfo = [
@@ -42,27 +64,27 @@ const Contact = () => {
       icon: <MapPin className="h-6 w-6 text-gold" />,
       title: "Address",
       details: [
-        "123 Luxury Avenue",
-        "Downtown District",
-        "New York, NY 10001"
+        HOTEL_CONFIG.location.address,
+        `${HOTEL_CONFIG.location.area}, ${HOTEL_CONFIG.location.city}`,
+        HOTEL_CONFIG.location.country
       ]
     },
     {
       icon: <Phone className="h-6 w-6 text-gold" />,
       title: "Phone",
       details: [
-        "Reservations: +1 (555) 123-4567",
-        "Concierge: +1 (555) 123-4568",
-        "Fax: +1 (555) 123-4569"
+        `Reservations: ${HOTEL_CONFIG.contact.phone}`,
+        `Concierge: ${HOTEL_CONFIG.contact.phone}`,
+        `Emergency: ${HOTEL_CONFIG.contact.phone}`
       ]
     },
     {
       icon: <Mail className="h-6 w-6 text-gold" />,
       title: "Email",
       details: [
-        "reservations@luxehotel.com",
-        "concierge@luxehotel.com",
-        "info@luxehotel.com"
+        HOTEL_CONFIG.contact.email,
+        "concierge@luxehoteldhaka.com",
+        "reservations@luxehoteldhaka.com"
       ]
     },
     {
@@ -71,7 +93,7 @@ const Contact = () => {
       details: [
         "Front Desk: 24/7",
         "Concierge: 24/7",
-        "Restaurant: 6 AM - 11 PM"
+        `Restaurant: 6 AM - 11 PM (${HOTEL_CONFIG.timezone.abbreviation})`
       ]
     }
   ];
@@ -185,8 +207,18 @@ const Contact = () => {
                       />
                     </div>
 
-                    <Button type="submit" className="w-full bg-navy hover:bg-navy-light text-white">
-                      Send Message
+                    <Button type="submit" className="w-full bg-navy hover:bg-navy-light text-white" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send Message
+                        </>
+                      )}
                     </Button>
                   </form>
                 </CardContent>

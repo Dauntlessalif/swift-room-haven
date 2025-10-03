@@ -1,8 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-hotel.jpg";
+import { HOTEL_CONFIG } from "@/config/hotelConfig";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
+  const handleBookNow = () => {
+    navigate('/rooms');
+  };
+
+  const handleExploreRooms = () => {
+    navigate('/rooms');
+  };
+
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
@@ -38,7 +50,7 @@ const HeroSection = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
           <div className="flex items-center space-x-2 text-sm">
             <MapPin className="h-4 w-4 text-gold" />
-            <span>Prime City Location</span>
+            <span>{HOTEL_CONFIG.location.area}, {HOTEL_CONFIG.location.city}</span>
           </div>
           <div className="flex items-center space-x-2 text-sm">
             <Calendar className="h-4 w-4 text-gold" />
@@ -49,14 +61,15 @@ const HeroSection = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
           <Button 
             size="lg" 
+            onClick={handleBookNow}
             className="bg-gold hover:bg-gold/90 text-gold-foreground px-8 py-4 text-lg font-semibold shadow-gold transition-smooth"
           >
             Book Your Stay
           </Button>
           <Button 
             size="lg" 
-            variant="outline" 
-            className="border-white text-white hover:bg-white hover:text-navy px-8 py-4 text-lg font-semibold transition-smooth"
+            onClick={handleExploreRooms}
+            className="bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-navy px-8 py-4 text-lg font-semibold shadow-lg transition-smooth"
           >
             Explore Rooms
           </Button>

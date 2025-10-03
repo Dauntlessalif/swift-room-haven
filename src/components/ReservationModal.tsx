@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Users, Phone, Mail, User, MapPin } from "lucide-react";
+import { CalendarIcon, Users, Phone, Mail, User, MapPin, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/data/rooms";
+import { bookingsApi, guestsApi, roomsApi, calculateNights, calculateTotalPrice } from "@/lib/api";
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -27,9 +28,11 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
     address: "",
     guests: 1,
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -60,28 +63,87 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
       return;
     }
 
-    // Calculate nights and total price
-    const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
-    const totalPrice = room ? nights * room.price : 0;
+    if (!room) {
+      toast({
+        title: "Error",
+        description: "Room information is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Simulate reservation submission
-    toast({
-      title: "Reservation Confirmed!",
-      description: `Your reservation for ${nights} night(s) has been confirmed. Total: $${totalPrice}`,
-    });
+    setIsLoading(true);
 
-    // Reset form and close modal
-    setCheckInDate(undefined);
-    setCheckOutDate(undefined);
-    setGuestDetails({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      address: "",
-      guests: 1,
-    });
-    onClose();
+    try {
+      // Format dates for database
+      const checkInStr = format(checkInDate, "yyyy-MM-dd");
+      const checkOutStr = format(checkOutDate, "yyyy-MM-dd");
+
+      // Check room availability
+      const isAvailable = await roomsApi.checkAvailability(room.id, checkInStr, checkOutStr);
+      
+      if (!isAvailable) {
+        toast({
+          title: "Room Unavailable",
+          description: "This room is not available for the selected dates. Please choose different dates.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Create or get guest
+      const guest = await guestsApi.createOrGetGuest({
+        first_name: guestDetails.firstName,
+        last_name: guestDetails.lastName,
+        email: guestDetails.email,
+        phone: guestDetails.phone,
+        address: guestDetails.address,
+      });
+
+      // Calculate nights and total price
+      const nights = calculateNights(checkInStr, checkOutStr);
+      const totalPrice = calculateTotalPrice(room.price, nights);
+
+      // Create booking
+      const booking = await bookingsApi.createBooking({
+        room_id: room.id,
+        guest_id: guest.id,
+        check_in_date: checkInStr,
+        check_out_date: checkOutStr,
+        number_of_guests: guestDetails.guests,
+        total_nights: nights,
+        total_price: totalPrice,
+        status: 'confirmed',
+      });
+
+      toast({
+        title: "Reservation Confirmed!",
+        description: `Your reservation for ${nights} night(s) has been confirmed. Booking ID: ${booking.id.slice(0, 8)}. Total: $${totalPrice}`,
+      });
+
+      // Reset form and close modal
+      setCheckInDate(undefined);
+      setCheckOutDate(undefined);
+      setGuestDetails({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        address: "",
+        guests: 1,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
+        title: "Booking Failed",
+        description: "There was an error processing your reservation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const totalNights = checkInDate && checkOutDate 
@@ -273,11 +335,18 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
 
           {/* Submit Button */}
           <div className="flex space-x-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-navy hover:bg-navy-light text-white">
-              Confirm Reservation
+            <Button type="submit" className="flex-1 bg-navy hover:bg-navy-light text-white" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Confirm Reservation'
+              )}
             </Button>
           </div>
         </form>

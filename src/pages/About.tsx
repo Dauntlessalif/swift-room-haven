@@ -1,6 +1,7 @@
 import Navigation from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Award, Users, Clock, MapPin, Star, Shield } from "lucide-react";
+import { HOTEL_CONFIG } from "@/config/hotelConfig";
 
 const About = () => {
   const features = [
@@ -22,7 +23,7 @@ const About = () => {
     {
       icon: <MapPin className="h-8 w-8 text-gold" />,
       title: "Prime Location",
-      description: "Located in the heart of the city with easy access to business districts and attractions."
+      description: `Located in ${HOTEL_CONFIG.location.area}, ${HOTEL_CONFIG.location.city} with easy access to business districts and attractions. Only ${HOTEL_CONFIG.location.airportDistance} from Hazrat Shahjalal International Airport.`
     },
     {
       icon: <Star className="h-8 w-8 text-gold" />,
@@ -62,8 +63,8 @@ const About = () => {
                 <h2 className="text-3xl font-bold text-navy mb-6">Our Story</h2>
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
                   <p>
-                    Founded in 1985, Luxe Hotel has been a beacon of luxury and sophistication 
-                    in the heart of the city. What began as a vision to create an extraordinary 
+                    Founded in 1985, Luxe Hotel Dhaka has been a beacon of luxury and sophistication 
+                    in {HOTEL_CONFIG.location.area}, {HOTEL_CONFIG.location.city}. What began as a vision to create an extraordinary 
                     hospitality experience has evolved into a world-renowned destination.
                   </p>
                   <p>

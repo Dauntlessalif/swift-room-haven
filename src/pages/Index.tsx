@@ -1,17 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
 import RoomCard from "@/components/RoomCard";
 import ReservationModal from "@/components/ReservationModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { rooms, Room } from "@/data/rooms";
-import { Star, Wifi, Car, Coffee, Dumbbell, Waves, Utensils } from "lucide-react";
+import { Room } from "@/data/rooms";
+import { roomsApi } from "@/lib/api";
+import { Star, Wifi, Car, Coffee, Dumbbell, Waves, Utensils, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadRooms();
+  }, []);
+
+  const loadRooms = async () => {
+    try {
+      setIsLoading(true);
+      const data = await roomsApi.getAllRooms();
+      const mappedRooms: Room[] = data.map((dbRoom) => ({
+        id: dbRoom.id,
+        name: dbRoom.name,
+        description: dbRoom.description,
+        price: Number(dbRoom.price),
+        capacity: dbRoom.capacity,
+        size: dbRoom.size,
+        bedType: dbRoom.bed_type,
+        amenities: dbRoom.amenities,
+        image: dbRoom.image_url || "",
+        available: dbRoom.available,
+      }));
+      setRooms(mappedRooms);
+    } catch (error) {
+      console.error('Error loading rooms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load rooms. Please refresh the page.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleBookRoom = (room: Room) => {
     setSelectedRoom(room);
@@ -47,15 +85,21 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-              {rooms.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  onBook={handleBookRoom}
-                />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-navy" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                {rooms.map((room) => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    onBook={handleBookRoom}
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="text-center">
               <Link to="/rooms">
