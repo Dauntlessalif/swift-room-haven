@@ -41,6 +41,7 @@ export const roomsApi = {
   // Check room availability for date range
   async checkAvailability(roomId: number, checkIn: string, checkOut: string) {
     const { data, error } = await supabase
+      // @ts-ignore - Supabase RPC type issue
       .rpc('check_room_availability', {
         p_room_id: roomId,
         p_check_in: checkIn,
@@ -71,6 +72,55 @@ export const roomsApi = {
 // ============================================
 
 export const guestsApi = {
+  // Get all guests
+  async getAll() {
+    const { data, error } = await supabase
+      .from('guests')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching guests:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
+  // Create a new guest
+  async create(guestData: GuestInsert) {
+    console.log('Creating guest with data:', guestData);
+    const { data, error } = await supabase
+      .from('guests')
+      // @ts-ignore - Supabase type issue with Insert types
+      .insert(guestData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating guest:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  // Update guest
+  async update(id: string, guestData: Partial<GuestInsert>) {
+    console.log('Updating guest:', id, guestData);
+    const { data, error } = await supabase
+      .from('guests')
+      // @ts-ignore - Supabase type issue with Update types
+      .update(guestData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating guest:', error);
+      throw error;
+    }
+    return data;
+  },
+
   // Create or get guest by email
   async createOrGetGuest(guestData: GuestInsert) {
     // First, try to find existing guest by email
@@ -86,13 +136,14 @@ export const guestsApi = {
     if (existingGuest) {
       const { data, error } = await supabase
         .from('guests')
+        // @ts-ignore - Supabase type issue
         .update({
           first_name: guestData.first_name,
           last_name: guestData.last_name,
           phone: guestData.phone,
           address: guestData.address,
         })
-        .eq('id', existingGuest.id)
+        .eq('id', (existingGuest as any).id)
         .select()
         .single();
       
@@ -103,6 +154,7 @@ export const guestsApi = {
     // If guest doesn't exist, create new one
     const { data, error } = await supabase
       .from('guests')
+      // @ts-ignore - Supabase type issue
       .insert(guestData)
       .select()
       .single();
@@ -133,6 +185,7 @@ export const bookingsApi = {
   async createBooking(bookingData: BookingInsert) {
     const { data, error } = await supabase
       .from('bookings')
+      // @ts-ignore - Supabase type issue
       .insert(bookingData)
       .select()
       .single();
@@ -150,6 +203,11 @@ export const bookingsApi = {
     
     if (error) throw error;
     return data as BookingDetail[];
+  },
+
+  // Alias for getAllBookings
+  async getAll() {
+    return this.getAllBookings();
   },
 
   // Get booking by ID
@@ -180,6 +238,7 @@ export const bookingsApi = {
   async updateBookingStatus(bookingId: string, status: Booking['status']) {
     const { data, error } = await supabase
       .from('bookings')
+      // @ts-ignore - Supabase type issue
       .update({ status })
       .eq('id', bookingId)
       .select()
@@ -232,6 +291,7 @@ export const contactMessagesApi = {
   async createMessage(messageData: ContactMessageInsert) {
     const { data, error } = await supabase
       .from('contact_messages')
+      // @ts-ignore - Supabase type issue
       .insert(messageData)
       .select()
       .single();
@@ -273,6 +333,7 @@ export const petCareApi = {
   async createRequest(requestData: PetCareRequestInsert) {
     const { data, error } = await supabase
       .from('pet_care_requests')
+      // @ts-ignore - Supabase type issue
       .insert(requestData)
       .select()
       .single();
@@ -290,6 +351,11 @@ export const petCareApi = {
     
     if (error) throw error;
     return data;
+  },
+
+  // Alias for getAllRequests
+  async getAll() {
+    return this.getAllRequests();
   },
 
   // Get pet care requests by email
@@ -311,6 +377,7 @@ export const petCareApi = {
   ) {
     const { data, error } = await supabase
       .from('pet_care_requests')
+      // @ts-ignore - Supabase type inference issue with update status
       .update({ status })
       .eq('id', requestId)
       .select()

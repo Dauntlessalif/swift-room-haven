@@ -13,8 +13,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Log configuration (without exposing the key)
+console.log('Supabase Configuration:', {
+  url: supabaseUrl,
+  keyPrefix: supabaseAnonKey.substring(0, 20) + '...',
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+});
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'swift-room-haven-auth',
+    flowType: 'pkce',
+  },
+  global: {
+    headers: {
+      'x-application-name': 'swift-room-haven',
+    },
   },
 });

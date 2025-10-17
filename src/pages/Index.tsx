@@ -26,7 +26,7 @@ const Index = () => {
     try {
       setIsLoading(true);
       const data = await roomsApi.getAllRooms();
-      const mappedRooms: Room[] = data.map((dbRoom) => ({
+      const mappedRooms: Room[] = data.map((dbRoom: any) => ({
         id: dbRoom.id,
         name: dbRoom.name,
         description: dbRoom.description,

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Phone } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { HOTEL_CONFIG } from "@/config/hotelConfig";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -60,6 +61,7 @@ const Navigation = () => {
                 Book Now
               </Button>
             </Link>
+            <UserMenu />
           </div>
 
           {/* Mobile menu button */}

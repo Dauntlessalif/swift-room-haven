@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/data/rooms";
 import { bookingsApi, guestsApi, roomsApi, calculateNights, calculateTotalPrice } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Guest, Booking } from "@/lib/database.types";
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -18,19 +20,42 @@ interface ReservationModalProps {
 }
 
 const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
+  const { user } = useAuth();
   const [checkInDate, setCheckInDate] = useState<Date>();
   const [checkOutDate, setCheckOutDate] = useState<Date>();
+  const [numberOfGuests, setNumberOfGuests] = useState(1);
   const [guestDetails, setGuestDetails] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     address: "",
-    guests: 1,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const { toast } = useToast();
+
+  // Auto-populate user data when logged in
+  useEffect(() => {
+    if (user) {
+      setGuestDetails({
+        firstName: user.user_metadata?.first_name || "",
+        lastName: user.user_metadata?.last_name || "",
+        email: user.email || "",
+        phone: user.user_metadata?.phone || "",
+        address: user.user_metadata?.address || "",
+      });
+    } else {
+      // Reset to empty if logged out
+      setGuestDetails({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        address: "",
+      });
+    }
+  }, [user, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +119,17 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
 
       // Create or get guest
       const guest = await guestsApi.createOrGetGuest({
+        id: user?.id, // Use authenticated user's ID
         first_name: guestDetails.firstName,
         last_name: guestDetails.lastName,
         email: guestDetails.email,
         phone: guestDetails.phone,
         address: guestDetails.address,
-      });
+      }) as Guest;
+
+      if (!guest) {
+        throw new Error('Failed to create or retrieve guest information');
+      }
 
       // Calculate nights and total price
       const nights = calculateNights(checkInStr, checkOutStr);
@@ -111,11 +141,15 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
         guest_id: guest.id,
         check_in_date: checkInStr,
         check_out_date: checkOutStr,
-        number_of_guests: guestDetails.guests,
+        number_of_guests: numberOfGuests,
         total_nights: nights,
         total_price: totalPrice,
         status: 'confirmed',
-      });
+      }) as Booking;
+
+      if (!booking) {
+        throw new Error('Failed to create booking');
+      }
 
       toast({
         title: "Reservation Confirmed!",
@@ -125,14 +159,7 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
       // Reset form and close modal
       setCheckInDate(undefined);
       setCheckOutDate(undefined);
-      setGuestDetails({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        address: "",
-        guests: 1,
-      });
+      setNumberOfGuests(1);
       onClose();
     } catch (error) {
       console.error('Booking error:', error);
@@ -159,6 +186,9 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
           <DialogTitle className="text-2xl font-bold text-navy">
             Reserve {room?.name}
           </DialogTitle>
+          <DialogDescription>
+            Complete the form below to book your stay
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -227,95 +257,130 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
             </div>
           </div>
 
-          {/* Guest Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center">
-              <User className="mr-2 h-5 w-5" />
-              Guest Information
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  required
-                  value={guestDetails.firstName}
-                  onChange={(e) => setGuestDetails({ ...guestDetails, firstName: e.target.value })}
-                />
-              </div>
+          {/* Number of Guests */}
+          <div className="space-y-2">
+            <Label htmlFor="guests">Number of Guests</Label>
+            <div className="relative">
+              <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="guests"
+                type="number"
+                min="1"
+                max={room?.capacity || 4}
+                className="pl-10"
+                value={numberOfGuests}
+                onChange={(e) => setNumberOfGuests(parseInt(e.target.value) || 1)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Maximum capacity: {room?.capacity || 4} guests
+            </p>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  required
-                  value={guestDetails.lastName}
-                  onChange={(e) => setGuestDetails({ ...guestDetails, lastName: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          {/* Guest Information - Only show if NOT logged in */}
+          {!user && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <User className="mr-2 h-5 w-5" />
+                Guest Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    className="pl-10"
+                    id="firstName"
                     required
-                    value={guestDetails.email}
-                    onChange={(e) => setGuestDetails({ ...guestDetails, email: e.target.value })}
+                    value={guestDetails.firstName}
+                    onChange={(e) => setGuestDetails({ ...guestDetails, firstName: e.target.value })}
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
                   <Input
-                    id="phone"
-                    type="tel"
-                    className="pl-10"
+                    id="lastName"
                     required
-                    value={guestDetails.phone}
-                    onChange={(e) => setGuestDetails({ ...guestDetails, phone: e.target.value })}
+                    value={guestDetails.lastName}
+                    onChange={(e) => setGuestDetails({ ...guestDetails, lastName: e.target.value })}
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="address"
-                    className="pl-10"
-                    required
-                    value={guestDetails.address}
-                    onChange={(e) => setGuestDetails({ ...guestDetails, address: e.target.value })}
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      className="pl-10"
+                      required
+                      value={guestDetails.email}
+                      onChange={(e) => setGuestDetails({ ...guestDetails, email: e.target.value })}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="guests">Number of Guests</Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="guests"
-                    type="number"
-                    min="1"
-                    max={room?.capacity || 4}
-                    className="pl-10"
-                    value={guestDetails.guests}
-                    onChange={(e) => setGuestDetails({ ...guestDetails, guests: parseInt(e.target.value) })}
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      className="pl-10"
+                      required
+                      value={guestDetails.phone}
+                      onChange={(e) => setGuestDetails({ ...guestDetails, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">Address</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="address"
+                      className="pl-10"
+                      required
+                      value={guestDetails.address}
+                      onChange={(e) => setGuestDetails({ ...guestDetails, address: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Logged-in User Info Display */}
+          {user && (
+            <div className="bg-secondary/30 p-4 rounded-lg border border-secondary">
+              <h3 className="text-lg font-semibold flex items-center mb-3">
+                <User className="mr-2 h-5 w-5" />
+                Guest Information
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center">
+                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{guestDetails.firstName} {guestDetails.lastName}</span>
+                </div>
+                <div className="flex items-center">
+                  <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>{guestDetails.email}</span>
+                </div>
+                {guestDetails.phone && (
+                  <div className="flex items-center">
+                    <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{guestDetails.phone}</span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  ℹ️ Update your information in your profile settings
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Price Summary */}
           {totalNights > 0 && (

@@ -2,14 +2,18 @@ import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import RoomCard from "@/components/RoomCard";
 import ReservationModal from "@/components/ReservationModal";
+import { AuthModal } from "@/components/auth/AuthModal";
 import { Room } from "@/data/rooms";
 import { roomsApi } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Rooms = () => {
+  const { user } = useAuth();
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -18,12 +22,33 @@ const Rooms = () => {
     loadRooms();
   }, []);
 
+  // Check for pending booking after user logs in
+  useEffect(() => {
+    if (user) {
+      const pendingBookingStr = sessionStorage.getItem('pendingBooking');
+      if (pendingBookingStr) {
+        try {
+          const pendingRoom = JSON.parse(pendingBookingStr);
+          sessionStorage.removeItem('pendingBooking');
+          setSelectedRoom(pendingRoom);
+          setIsModalOpen(true);
+          toast({
+            title: "Welcome back!",
+            description: "Let's complete your booking.",
+          });
+        } catch (error) {
+          console.error('Error parsing pending booking:', error);
+        }
+      }
+    }
+  }, [user, toast]);
+
   const loadRooms = async () => {
     try {
       setIsLoading(true);
       const data = await roomsApi.getAllRooms();
       // Map database rooms to Room type
-      const mappedRooms: Room[] = data.map((dbRoom) => ({
+      const mappedRooms: Room[] = (data as any[]).map((dbRoom) => ({
         id: dbRoom.id,
         name: dbRoom.name,
         description: dbRoom.description,
@@ -49,6 +74,23 @@ const Rooms = () => {
   };
 
   const handleBookRoom = (room: Room) => {
+    // Check if user is authenticated
+    if (!user) {
+      // Store the selected room for after login
+      setSelectedRoom(room);
+      sessionStorage.setItem('pendingBooking', JSON.stringify(room));
+      
+      // Show auth modal
+      setShowAuthModal(true);
+      
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to book a room. You'll be able to complete your booking after signing in.",
+        variant: "default",
+      });
+      return;
+    }
+    
     setSelectedRoom(room);
     setIsModalOpen(true);
   };
@@ -127,10 +169,18 @@ const Rooms = () => {
         </section>
       </main>
 
+      {/* Reservation Modal */}
       <ReservationModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         room={selectedRoom}
+      />
+
+      {/* Auth Modal - Shows when user tries to book without being logged in */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultTab="signin"
       />
     </div>
   );
