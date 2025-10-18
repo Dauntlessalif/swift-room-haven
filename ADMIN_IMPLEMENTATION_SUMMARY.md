@@ -2,7 +2,7 @@
 
 ## ✅ What Was Created
 
-### 🚀 Fully Functional Admin Dashboard
+### 🚀 Fully Functional Admin 
 
 A comprehensive admin panel has been successfully implemented for Swift Room Haven with the following components:
 
